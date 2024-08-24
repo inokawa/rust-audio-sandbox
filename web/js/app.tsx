@@ -1,35 +1,60 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { getAudioDevices, startSynth } from "./audio";
 
-export const App = () => {
+const DeviceSelector = ({ devices }: { devices: MediaDeviceInfo[] }) => {
+  const inputs = devices.filter((d) => d.kind === "audioinput");
+  const outputs = devices.filter((d) => d.kind === "audiooutput");
   return (
     <div>
-      <button
-        onClick={async () => {
-          const wasm = await import("../pkg/index.js");
+      <div>
+        <div>input</div>
+        <div>
+          {inputs.map((d) => {
+            return (
+              <div key={d.deviceId}>
+                <label>
+                  <input type="radio" name="input" />
+                  {d.label}
+                </label>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      <div>
+        <div>output</div>
+        <div>
+          {outputs.map((d) => {
+            return (
+              <div key={d.deviceId}>
+                <label>
+                  <input type="radio" name="output" />
+                  {d.label}
+                </label>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+};
 
-          window.AudioContext =
-            window.AudioContext || (window as any).webkitAudioContext;
-          const ctx = new AudioContext();
-          const sampleRate = ctx.sampleRate;
+export const App = () => {
+  const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
 
-          const sec = 1;
-          const resBuf = wasm.synth(440, sec, sampleRate);
+  useEffect(() => {
+    (async () => {
+      setDevices(await getAudioDevices());
+    })();
+  }, []);
 
-          const audioBuffer = ctx.createBuffer(2, sec * sampleRate, sampleRate);
-          audioBuffer.getChannelData(0).set(resBuf);
-          audioBuffer.getChannelData(1).set(resBuf);
-          const source = ctx.createBufferSource();
-          source.buffer = audioBuffer;
-          source.connect(ctx.destination);
-          source.start();
-
-          setTimeout(() => {
-            source.stop();
-          }, 5000);
-        }}
-      >
-        start
-      </button>
+  return (
+    <div>
+      <DeviceSelector devices={devices} />
+      <div>
+        <button onClick={startSynth}>start</button>
+      </div>
     </div>
   );
 };
