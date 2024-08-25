@@ -3,7 +3,8 @@ import {
   createAudioContext,
   getAudioDevices,
   createAudioStream,
-  runAnalyser,
+  runWaveAnalyser,
+  runFrequencyAnalyser,
 } from "./audio";
 
 const DeviceSelector = ({
@@ -68,14 +69,12 @@ const DeviceSelector = ({
 };
 
 export const App = () => {
-  const CANVAS_WIDTH = 400;
-  const CANVAS_HEIGHT = 400;
-
   const [input, setInput] = useState<string | null>(null);
   const [output, setOutput] = useState<string | null>(null);
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const canvasRef2 = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
     (async () => {
@@ -97,15 +96,12 @@ export const App = () => {
             onClick={async () => {
               if (!input) return;
               const canvasElement = canvasRef.current;
-              if (!canvasElement) return;
-              const canvasContext = canvasElement.getContext("2d")!;
+              const canvasElement2 = canvasRef2.current;
+              if (!canvasElement || !canvasElement2) return;
               const context = createAudioContext();
               const stream = await createAudioStream(context, input);
-              const cleanup = runAnalyser(context, stream, {
-                width: CANVAS_WIDTH,
-                height: CANVAS_HEIGHT,
-                context: canvasContext,
-              });
+              const cleanup = runWaveAnalyser(context, stream, canvasElement);
+              const cleanup2 = runFrequencyAnalyser(context, stream, canvasElement2);
             }}
           >
             start
@@ -113,7 +109,8 @@ export const App = () => {
         </div>
       </div>
       <div>
-        <canvas ref={canvasRef} width={CANVAS_WIDTH} height={CANVAS_HEIGHT} />
+        <canvas ref={canvasRef} width={400} height={300} />
+        <canvas ref={canvasRef2} width={400} height={300} />
       </div>
     </div>
   );

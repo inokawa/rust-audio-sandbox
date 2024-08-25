@@ -53,19 +53,40 @@ const drawPath = (
   context.stroke();
 };
 
-export const runAnalyser = (
+const drawBars = (
+  context: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  dataArray: Uint8Array,
+  bufferLength: number
+) => {
+  context.clearRect(0, 0, width, height);
+
+  context.fillStyle = "rgb(0, 0, 0)";
+  context.fillRect(0, 0, width, height);
+
+  const barWidth = (width / bufferLength) * 2.5;
+  let barHeight;
+  let x = 0;
+
+  for (let i = 0; i < bufferLength; i++) {
+    barHeight = dataArray[i];
+
+    context.fillStyle = "rgb(" + (barHeight + 100) + ",50,50)";
+    context.fillRect(x, height - barHeight / 2, barWidth, barHeight / 2);
+
+    x += barWidth + 1;
+  }
+};
+
+export const runWaveAnalyser = (
   context: AudioContext,
   source: AudioNode,
-  {
-    context: canvasContext,
-    width,
-    height,
-  }: {
-    context: CanvasRenderingContext2D;
-    width: number;
-    height: number;
-  }
+  canvas: HTMLCanvasElement
 ) => {
+  const canvasContext = canvas.getContext("2d")!;
+  const { width, height } = canvas;
+
   const analyser = context.createAnalyser();
   source.connect(analyser);
 
@@ -78,6 +99,40 @@ export const runAnalyser = (
     analyser.getByteTimeDomainData(dataArray);
 
     drawPath(canvasContext, width, height, dataArray, bufferLength);
+
+    id = requestAnimationFrame(draw);
+  };
+
+  draw();
+
+  return () => {
+    analyser.disconnect();
+    if (id != null) {
+      cancelAnimationFrame(id);
+    }
+  };
+};
+
+export const runFrequencyAnalyser = (
+  context: AudioContext,
+  source: AudioNode,
+  canvas: HTMLCanvasElement
+) => {
+  const canvasContext = canvas.getContext("2d")!;
+  const { width, height } = canvas;
+
+  const analyser = context.createAnalyser();
+  source.connect(analyser);
+
+  analyser.fftSize = 256;
+  const bufferLength = analyser.frequencyBinCount;
+  const dataArray = new Uint8Array(bufferLength);
+
+  let id: number | null = null;
+  const draw = () => {
+    analyser.getByteFrequencyData(dataArray);
+
+    drawBars(canvasContext, width, height, dataArray, bufferLength);
 
     id = requestAnimationFrame(draw);
   };
